@@ -3,8 +3,8 @@
 - name: deploy_tangoenv
   hosts: development
   vars:
-    build_tango: 'yes'
-    build_mysql: 'yes'
+    build_tango: 'no'
+    build_mysql: 'no'
     install_pytango: 'yes'
     install_ide: 'no'
     pycharm_version: 'community-2018.3.3'
@@ -41,17 +41,17 @@
         mode: 0644
       when: build_mysql == 'yes'
     
+    - name: Copy sql_mode conf
+      copy:
+        src: "{{playbook_dir}}/files/sql_mode.cnf"
+        dest: /etc/mysql/conf.d
+      when: build_mysql == 'yes'
+
     - name: Start the MySQL service
       service: 
         name: mysql 
         state: restarted
         enabled: yes
-      when: build_mysql == 'yes'
-
-    - name: Copy sql_mode conf
-      copy:
-        src: "{{playbook_dir}}/files/sql_mode.cnf"
-        dest: /etc/mysql/conf.d
       when: build_mysql == 'yes'
 
     - name: Install dependencies apt for TANGO
@@ -139,32 +139,23 @@
         fi
       when: build_tango == 'yes'
 
-    # - name: download Pipfile
-    #   get_url:
-    #     url: "https://raw.githubusercontent.com/ska-telescope/ska-docker/master/docker/tango/ska-python-buildenv/Pipfile"
-    #     dest:  ~/Pipfile
-    #     mode: 0644
-    #     force: yes
-    #   when: install_pytango == 'yes'
-
-    # - name: download Pipfile.lock
-    #   get_url:
-    #     url: "https://raw.githubusercontent.com/ska-telescope/ska-docker/master/docker/tango/ska-python-buildenv/Pipfile.lock"
-    #     dest:  ~/Pipfile.lock
-    #     mode: 0644
-    #     force: yes
-    #   when: install_pytango == 'yes'
+    - name: Creates directory build_pytango_dir
+      file:
+        path: /build_pytango_dir
+        state: directory
 
     - name: Copy Pipfile
       copy:
         src: "{{playbook_dir}}/files/Pipfile"
-        dest:  ~/Pipfile
+        dest:  /build_pytango_dir/Pipfile
+        force: yes
       when: install_pytango == 'yes'
 
     - name: Copy Pipfile.lock
       copy:
         src: "{{playbook_dir}}/files/Pipfile.lock"
-        dest:  ~/Pipfile.lock
+        dest:  /build_pytango_dir/Pipfile.lock
+        force: yes
       when: install_pytango == 'yes'
 
     - name: Install dependencies apt for pytango
@@ -173,7 +164,7 @@
             - libboost-python-dev 
             - python3-dev 
             - python3-pip
-            - python-pip
+            - python-apt
             - virtualenv
         state: latest
         force: yes 
@@ -184,13 +175,24 @@
       copy:
         src: "{{playbook_dir}}/files/environment.sh"
         dest: /etc/profile.d/environment.sh
+        mode: 0755
+        force: yes
       when: install_pytango == 'yes'
 
     - name: Install pytango virtualenv
       shell: |
+        cd /build_pytango_dir
+        export LC_ALL=C.UTF-8 \
+          LANG=C.UTF-8 \
+          PIPENV_TIMEOUT=900 \
+          PATH=/venv/bin:$PATH \
+          VIRTUAL_ENV=/venv \
+          PIPENV_VERBOSITY=-1 \
+          PIPENV_NOSPIN=1
+        rm -r -f /venv
+        pwd
         virtualenv -p /usr/bin/python3 /venv
-        more Pipfile
-        pip install pipenv
+        pip3 install pipenv
         pipenv install --dev
       when: install_pytango == 'yes'
 
