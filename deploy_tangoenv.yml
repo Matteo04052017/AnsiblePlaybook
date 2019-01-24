@@ -3,8 +3,8 @@
 - name: deploy_tangoenv
   hosts: development
   vars:
-    build_tango: 'yes'
-    build_mysql: 'yes'
+    build_tango: 'no'
+    build_mysql: 'no'
     install_pytango: 'yes'
     install_ide: 'no'
     pycharm_version: 'community-2018.3.3'
@@ -13,6 +13,8 @@
     OMNIORB_VERSION: '4.2.1'
     OMNIORB_VERSION_DETAIL: '4.2.1-2'
     #vscode version 1.30
+  environment: 
+    
   remote_user: root
   become: yes
   tasks:
@@ -166,21 +168,16 @@
         update_cache: yes
       when: install_pytango == 'yes'
 
-    - name: Install pytango exports
-      shell: |
-        export LC_ALL=C.UTF-8 \
-        LANG=C.UTF-8 \
-        PIPENV_TIMEOUT=900 \
-        PATH=/venv/bin:$PATH \
-        VIRTUAL_ENV=/venv \
-        PIPENV_VERBOSITY=-1 \
-        PIPENV_NOSPIN=1
+    - name: Install pytango environment variable
+      copy:
+        src: "{{playbook_dir}}/files/environment.sh"
+        dest: /etc/profile.d/environment.sh
       when: install_pytango == 'yes'
 
     - name: Install pytango virtualenv
       shell: |
-        more Pipfile
         virtualenv -p /usr/bin/python3 /venv
+        more Pipfile
         pip install pipenv
         pipenv install --dev
       when: install_pytango == 'yes'
