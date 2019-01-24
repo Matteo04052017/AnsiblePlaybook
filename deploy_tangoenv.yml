@@ -3,10 +3,10 @@
 - name: deploy_tangoenv
   hosts: development
   vars:
-    build_tango: 'no'
-    build_mysql: 'no'
+    build_tango: 'yes'
+    build_mysql: 'yes'
     install_pytango: 'yes'
-    install_ide: 'no'
+    install_ide: 'yes'
     pycharm_version: 'community-2018.3.3'
     TANGO_VERSION: '9.2.5a'
     ZEROMQ_VERSION: '4.0.5'
