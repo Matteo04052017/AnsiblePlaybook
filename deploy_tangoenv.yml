@@ -1,0 +1,206 @@
+---
+
+- name: deploy_tangoenv
+  hosts: development
+  vars:
+    build_tango: 'yes'
+    build_mysql: 'yes'
+    install_pytango: 'yes'
+    install_ide: 'no'
+    pycharm_version: 'community-2018.3.3'
+    TANGO_VERSION: '9.2.5a'
+    ZEROMQ_VERSION: '4.0.5'
+    OMNIORB_VERSION: '4.2.1'
+    OMNIORB_VERSION_DETAIL: '4.2.1-2'
+    #vscode version 1.30
+  remote_user: root
+  become: yes
+  tasks:
+    - name: Install dependencies apt for MySql
+      apt:
+        name:
+            - python
+            - python-dev 
+            - python-pkgconfig
+            - python3-pymysql
+            - mysql-server
+            - mysql-client
+            - python-mysqldb
+            - libmysqlclient-dev
+        state: latest
+        force: yes 
+        update_cache: yes
+      when: build_mysql == 'yes'
+
+    - name: copy cnf
+      copy:
+        src: "{{playbook_dir}}/files/.my.cnf"
+        dest:  ~/.my.cnf
+        mode: 0644
+      when: build_mysql == 'yes'
+    
+    - name: Start the MySQL service
+      service: 
+        name: mysql 
+        state: restarted
+        enabled: yes
+      when: build_mysql == 'yes'
+
+    - name: Copy sql_mode conf
+      copy:
+        src: "{{playbook_dir}}/files/sql_mode.cnf"
+        dest: /etc/mysql/conf.d
+      when: build_mysql == 'yes'
+
+    - name: Install dependencies apt for TANGO
+      apt:
+        name:
+            - autoconf 
+            - automake 
+            - build-essential 
+            - ca-certificates 
+            - curl 
+            - libkrb5-dev 
+            - libtool 
+            - pkg-config 
+            - unzip
+            - file
+            - default-jdk
+            - default-jre-headless
+        state: latest
+        force: yes 
+        update_cache: yes
+      when: build_tango == 'yes'
+
+    - name: Build zeromq
+      shell: |
+        ZEROMQ_DOWNLOAD_URL=https://archive.org/download/zeromq_{{ZEROMQ_VERSION}}/zeromq-{{ZEROMQ_VERSION}}.tar.gz \
+        && rm -rf /var/lib/apt/lists/* \
+        && mkdir -p /usr/src/zeromq \
+        && cd /usr/src/zeromq \
+        && curl -fsSL "$ZEROMQ_DOWNLOAD_URL" -o zeromq.tar.gz \
+        && tar xf zeromq.tar.gz -C /usr/src/zeromq --strip-components=1 \
+        && ./configure --enable-static=no \
+        && make -C /usr/src/zeromq -j$(nproc) \
+        && make -C /usr/src/zeromq install \
+        && rm -r /usr/src/zeromq
+      when: build_tango == 'yes'
+
+    - name: Build omniorb
+      shell: |
+        OMNIORB_DOWNLOAD_URL=https://svwh.dl.sourceforge.net/project/omniorb/omniORB/omniORB-{{OMNIORB_VERSION}}/omniORB-{{OMNIORB_VERSION_DETAIL}}.tar.bz2 \
+          && OMNIORB_PATCH_URL=http://ftp.esrf.fr/pub/cs/tango/Patches/dii_race.patch \
+          && rm -rf /var/lib/apt/lists/* \
+          && mkdir -p /usr/src/omniorb \
+          && cd /usr/src/omniorb \
+          && curl -fsSL "$OMNIORB_DOWNLOAD_URL" -o omniorb.tar.bz2 \
+          && curl -fsSL "$OMNIORB_PATCH_URL" -o dii_race.patch \
+          && tar xf omniorb.tar.bz2 -C /usr/src/omniorb --strip-components=1 \
+          && patch -p0 < dii_race.patch \
+          && ./configure --enable-static=no \
+          && make -C /usr/src/omniorb -j$(nproc) \
+          && make -C /usr/src/omniorb install \
+          && rm -r /usr/src/omniorb
+      when: build_tango == 'yes'
+
+    - name: Build tango 
+      shell: |
+        TANGO_DOWNLOAD_URL=https://netcologne.dl.sourceforge.net/project/tango-cs/tango-{{TANGO_VERSION}}.tar.gz \
+            && service mysql start \
+            && mkdir -p /usr/share/man/man1 \
+            && rm -rf /var/lib/apt/lists/* \
+            && mkdir -p /usr/src/tango \
+            && cd /usr/src/tango \
+            && curl -fsSL "$TANGO_DOWNLOAD_URL" -o tango.tar.gz \
+            && tar xf tango.tar.gz -C /usr/src/tango --strip-components=1 \
+            && ./configure --with-zmq=/usr/local --with-omni=/usr/local --with-mysqlclient-prefix=/usr --enable-static=no \
+            && make -C /usr/src/tango -j$(nproc) \
+            && make -C /usr/src/tango install \
+            && ldconfig \
+            && rm -r /usr/src/tango
+
+        # what for?
+        rm -rf /var/lib/apt/lists/* /etc/apt/apt.conf.d/30proxy
+
+        # what for?
+        sed -i -e '/^assistive_technologies=/s/^/#/' /etc/java-*-openjdk/accessibility.properties
+
+        getent passwd tango  > /dev/null
+        if [ $? -eq 0 ]; then
+            echo "tango user already created"
+        else
+            echo "creating tango user"
+            useradd --create-home --home-dir /home/tango tango
+            mkdir --parents /etc/sudoers.d
+            echo "tango ALL=(root) NOPASSWD:ALL" > /etc/sudoers.d/tango \
+            && chmod 0440 /etc/sudoers.d/tango
+        fi
+      when: build_tango == 'yes'
+
+    - name: download Pipfile
+      get_url:
+        url: "https://raw.githubusercontent.com/ska-telescope/ska-docker/master/docker/tango/ska-python-buildenv/Pipfile"
+        dest:  ~/Pipfile
+        mode: 0644
+        force: yes
+      when: install_pytango == 'yes'
+
+    - name: download Pipfile.lock
+      get_url:
+        url: "https://raw.githubusercontent.com/ska-telescope/ska-docker/master/docker/tango/ska-python-buildenv/Pipfile.lock"
+        dest:  ~/Pipfile.lock
+        mode: 0644
+        force: yes
+      when: install_pytango == 'yes'
+
+    - name: Install dependencies apt for pytango
+      apt:
+        name:
+            - libboost-python-dev 
+            - python3-dev 
+            - python3-pip
+            - python-pip
+            - virtualenv
+        state: latest
+        force: yes 
+        update_cache: yes
+      when: install_pytango == 'yes'
+
+    - name: Install pytango exports
+      shell: |
+        export LC_ALL=C.UTF-8 \
+        LANG=C.UTF-8 \
+        PIPENV_TIMEOUT=900 \
+        PATH=/venv/bin:$PATH \
+        VIRTUAL_ENV=/venv \
+        PIPENV_VERBOSITY=-1 \
+        PIPENV_NOSPIN=1
+      when: install_pytango == 'yes'
+
+    - name: Install pytango virtualenv
+      shell: |
+        more Pipfile
+        virtualenv -p /usr/bin/python3 /venv
+        pip install pipenv
+        pipenv install --dev
+      when: install_pytango == 'yes'
+
+    - name: Install vscode deb package
+      apt:
+        deb: "https://go.microsoft.com/fwlink/?LinkID=760868"
+        force: yes
+      when: install_ide == 'yes'
+
+    - name: download Pycharm
+      get_url:
+        url: "https://download.jetbrains.com/python/pycharm-{{pycharm_version}}.tar.gz"
+        dest:  ~/pycharm-{{pycharm_version}}.tar.gz
+        mode: 0644
+        force: yes
+      when: install_ide == 'yes'
+
+    - name: Install Pycharm
+      shell: |
+        tar xfz pycharm-{{pycharm_version}}.tar.gz -C /opt/
+        echo run pycharm located with /opt/pycharm-{{pycharm_version}}/bin/pycharm.sh
+      when: install_ide == 'yes'
