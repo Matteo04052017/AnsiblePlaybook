@@ -3,8 +3,8 @@
 - name: deploy_tangoenv
   hosts: development
   vars:
-    build_tango: 'yes'
-    build_mysql: 'yes'
+    build_tango: 'no'
+    build_mysql: 'no'
     install_pytango: 'yes'
     install_ide: 'no'
     pycharm_version: 'community-2018.3.3'
@@ -139,20 +139,32 @@
         fi
       when: build_tango == 'yes'
 
-    - name: download Pipfile
-      get_url:
-        url: "https://raw.githubusercontent.com/ska-telescope/ska-docker/master/docker/tango/ska-python-buildenv/Pipfile"
+    # - name: download Pipfile
+    #   get_url:
+    #     url: "https://raw.githubusercontent.com/ska-telescope/ska-docker/master/docker/tango/ska-python-buildenv/Pipfile"
+    #     dest:  ~/Pipfile
+    #     mode: 0644
+    #     force: yes
+    #   when: install_pytango == 'yes'
+
+    # - name: download Pipfile.lock
+    #   get_url:
+    #     url: "https://raw.githubusercontent.com/ska-telescope/ska-docker/master/docker/tango/ska-python-buildenv/Pipfile.lock"
+    #     dest:  ~/Pipfile.lock
+    #     mode: 0644
+    #     force: yes
+    #   when: install_pytango == 'yes'
+
+    - name: Copy Pipfile
+      copy:
+        src: "{{playbook_dir}}/files/Pipfile"
         dest:  ~/Pipfile
-        mode: 0644
-        force: yes
       when: install_pytango == 'yes'
 
-    - name: download Pipfile.lock
-      get_url:
-        url: "https://raw.githubusercontent.com/ska-telescope/ska-docker/master/docker/tango/ska-python-buildenv/Pipfile.lock"
+    - name: Copy Pipfile.lock
+      copy:
+        src: "{{playbook_dir}}/files/Pipfile.lock"
         dest:  ~/Pipfile.lock
-        mode: 0644
-        force: yes
       when: install_pytango == 'yes'
 
     - name: Install dependencies apt for pytango
