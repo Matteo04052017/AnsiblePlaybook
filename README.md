@@ -1,6 +1,9 @@
 # AnsiblePlaybook
 This playbook allows to create a minimum but complete TANGO-controls develoment environemnt.
 
+TESTED OS:
+*. ubuntu:16.04
+
 Steps to make it work with SSH:
 1. Edit the file "hosts" with the address(es) to want to manage. (if not localhost)
 2. Add the ssh key to the managed hosts (if not localhost). 
