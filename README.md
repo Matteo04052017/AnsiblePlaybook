@@ -1,10 +1,7 @@
 # AnsiblePlaybook
 This playbook allows to create a minimum but complete TANGO-controls develoment environemnt.
 
-TESTED OS:
-*. ubuntu:16.04
-
-Steps to make it work with SSH:
+Steps to make it work with RSA KEY:
 1. Edit the file "hosts" with the address(es) to want to manage. (if not localhost)
 2. Add the ssh key to the managed hosts (if not localhost). 
 3. Install ansible:
@@ -15,7 +12,7 @@ Steps to make it work with SSH:
 ``` 
     ansible-playbook -i hosts deploy_tangoenv.yml
 ```
-Steps to make it work without SSH (deprecatred):
+Steps to make it work without RSA KEY (deprecatred):
 1. Install ansible:
 ``` 
     apt-add-repository --yes --update ppa:ansible/ansible && apt-get install ansible
@@ -42,3 +39,6 @@ For example:
 ```
     ansible-playbook -i hosts deploy_tangoenv.yml --extra-vars "build_tango='no' build_mysql='no' install_ide='no'"
 ```
+
+TESTED OS:
+* ubuntu:16.04
