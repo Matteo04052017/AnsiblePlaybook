@@ -3,8 +3,8 @@
 - name: deploy_tangoenv
   hosts: development
   vars:
-    build_tango: 'yes'
-    build_mysql: 'yes'
+    build_tango: 'no'
+    build_mysql: 'no'
     install_pytango: 'yes'
     install_ide: 'yes'
     pycharm_version: 'community-2018.3.3'
@@ -18,7 +18,10 @@
   remote_user: root
   become: yes
   tasks:
-    - name: Install dependencies apt for MySql
+    - debug: 
+        var: ansible_distribution
+
+    - name: Install python python-dev python-pkgconfig python3-pymysql mysql-server mysql-client python-mysqldb
       apt:
         name:
             - python
@@ -28,25 +31,44 @@
             - mysql-server
             - mysql-client
             - python-mysqldb
-            - libmysqlclient-dev
         state: latest
         force: yes 
         update_cache: yes
       when: build_mysql == 'yes'
 
-    - name: copy cnf
+
+    - name: install libmysqlclient-dev (Debian)
+      apt:
+        name:
+            - default-libmysqlclient-dev
+        state: latest
+        force: yes 
+        update_cache: yes
+      when: ansible_distribution == 'Debian'
+
+    - name: install libmysqlclient-dev (Ubuntu)
+      apt:
+        name:
+            - libmysqlclient-dev
+        state: latest
+        force: yes 
+        update_cache: yes
+      when: ansible_distribution == 'Ubuntu'
+
+    - name: copy .my.cnf
       copy:
         src: "{{playbook_dir}}/files/.my.cnf"
         dest:  ~/.my.cnf
         mode: 0644
       when: build_mysql == 'yes'
     
-    - name: Copy sql_mode conf
+    - name: Copy sql_mode.cnf
       copy:
         src: "{{playbook_dir}}/files/sql_mode.cnf"
         dest: /etc/mysql/conf.d
       when: build_mysql == 'yes'
 
+    # is it working?
     - name: Start the MySQL service
       service: 
         name: mysql 
@@ -54,7 +76,12 @@
         enabled: yes
       when: build_mysql == 'yes'
 
-    - name: Install dependencies apt for TANGO
+    # for debian only: https://bugs.debian.org/cgi-bin/bugreport.cgi?bug=863199
+    - name: create directory /usr/share/man/man1 (bugs.debian=863199)
+      shell: mkdir -p /usr/share/man/man1
+      when: ansible_distribution == 'Debian'
+
+    - name: Install autoconf automake build-essential ca-certificates curl libkrb5-dev libtool pkg-config unzip file default-jdk default-jre-headless
       apt:
         name:
             - autoconf 
@@ -105,7 +132,7 @@
           && rm -r /usr/src/omniorb
       when: build_tango == 'yes'
 
-    - name: Build tango 
+    - name: Build TANGO 
       shell: |
         TANGO_DOWNLOAD_URL=https://netcologne.dl.sourceforge.net/project/tango-cs/tango-{{TANGO_VERSION}}.tar.gz \
             && service mysql start \
@@ -139,7 +166,7 @@
         fi
       when: build_tango == 'yes'
 
-    - name: Creates directory build_pytango_dir
+    - name: Create directory build_pytango_dir
       file:
         path: /build_pytango_dir
         state: directory
@@ -158,7 +185,7 @@
         force: yes
       when: install_pytango == 'yes'
 
-    - name: Install dependencies apt for pytango
+    - name: Install libboost-python-dev python3-dev python3-pip python-apt virtualenv apt for pytango
       apt:
         name:
             - libboost-python-dev 
@@ -171,7 +198,7 @@
         update_cache: yes
       when: install_pytango == 'yes'
 
-    - name: Install pytango environment variable
+    - name: Copy environment.sh
       copy:
         src: "{{playbook_dir}}/files/environment.sh"
         dest: /etc/profile.d/environment.sh
@@ -179,7 +206,7 @@
         force: yes
       when: install_pytango == 'yes'
 
-    - name: Install pytango virtualenv
+    - name: Install pytango on virtualenv with pipenv
       shell: |
         cd /build_pytango_dir
         export LC_ALL=C.UTF-8 \
@@ -196,13 +223,13 @@
         pipenv install --dev
       when: install_pytango == 'yes'
 
-    - name: Install vscode deb package
+    - name: Install vscode
       apt:
         deb: "https://go.microsoft.com/fwlink/?LinkID=760868"
         force: yes
       when: install_ide == 'yes'
 
-    - name: download Pycharm
+    - name: Download Pycharm
       get_url:
         url: "https://download.jetbrains.com/python/pycharm-{{pycharm_version}}.tar.gz"
         dest:  ~/pycharm-{{pycharm_version}}.tar.gz
