@@ -24,7 +24,6 @@ Steps to make it work without RSA KEY (deprecatred):
 To work with pytango, do the following steps:
 ``` 
     source /venv/bin/activate
-    pipenv shell
 ```
 
 The following variables can be set:
