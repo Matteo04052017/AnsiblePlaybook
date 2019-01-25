@@ -47,3 +47,4 @@ For example:
 
 TESTED OS:
 * ubuntu:16.04
+* debian:stretch-slim
