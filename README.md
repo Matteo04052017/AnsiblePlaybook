@@ -12,22 +12,12 @@ Steps to make it work with RSA KEY:
 ``` 
     ansible-playbook -i hosts deploy_tangoenv.yml 
 ```
-
-If localhost, lunch ansible with the sudo password in this way:
+or with password: 
 ```
     ansible-playbook -i hosts deploy_tangoenv.yml --extra-vars "ansible_become_pass=*password*"
 ```
 
-Steps to make it work without RSA KEY (deprecatred):
-1. Install ansible:
-``` 
-    apt-add-repository --yes --update ppa:ansible/ansible && apt-get install ansible
-```
-2. Lunch ansible:: 
-``` 
-    ansible-playbook -i hosts deploy_tangoenv.yml -u USERNAME --ask-pass --ask-sudo-pass
-```
-To work with pytango, do the following steps:
+To work with pytango, activate the virtualenv:
 ``` 
     source /venv/bin/activate
 ```
