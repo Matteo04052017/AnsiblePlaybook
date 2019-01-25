@@ -13,9 +13,6 @@
     OMNIORB_VERSION: '4.2.1'
     OMNIORB_VERSION_DETAIL: '4.2.1-2'
     #vscode version 1.30
-  environment: 
-    
-  remote_user: root
   become: yes
   tasks:
     - debug: 
@@ -44,7 +41,9 @@
         state: latest
         force: yes 
         update_cache: yes
-      when: ansible_distribution == 'Debian'
+      when: 
+        - ansible_distribution == 'Debian'
+        - build_mysql == 'yes'
 
     - name: install libmysqlclient-dev (Ubuntu)
       apt:
@@ -53,7 +52,9 @@
         state: latest
         force: yes 
         update_cache: yes
-      when: ansible_distribution == 'Ubuntu'
+      when: 
+        - ansible_distribution == 'Ubuntu'
+        - build_mysql == 'yes'
 
     - name: copy .my.cnf
       copy:

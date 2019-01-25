@@ -2,7 +2,7 @@
 This playbook allows to create a minimum but complete TANGO-controls develoment environemnt.
 
 Steps to make it work with RSA KEY:
-1. Edit the file "hosts" with the address(es) to want to manage. (if not localhost)
+1. Edit the file "hosts" with the address(es) to want to manage (if not localhost).
 2. Add the ssh key to the managed hosts (if not localhost). 
 3. Install ansible:
 ``` 
@@ -10,8 +10,14 @@ Steps to make it work with RSA KEY:
 ```
 4. Lunch ansible:
 ``` 
-    ansible-playbook -i hosts deploy_tangoenv.yml
+    ansible-playbook -i hosts deploy_tangoenv.yml 
 ```
+
+If localhost, lunch ansible with the sudo password in this way:
+```
+    ansible-playbook -i hosts deploy_tangoenv.yml --extra-vars "ansible_become_pass=*password*"
+```
+
 Steps to make it work without RSA KEY (deprecatred):
 1. Install ansible:
 ``` 
